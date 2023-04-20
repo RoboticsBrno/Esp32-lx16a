@@ -13,18 +13,32 @@ namespace lx16a {
 
 class SmartServoBus {
 public:
+    struct AutoStopParams {
+        // Maximum difference between expected and actual servo angle before the AutoStop Triggers
+        // It is in centidegrees, (1deg == 100 centideg). Default: 2000 (20 degrees)
+        int16_t max_diff_centideg;
+
+        // How many times must the difference between expected and actual servo angle
+        // fall outside of max_diff_centideg before the servo is stopped. Default: 3
+        uint8_t max_diff_readings;
+    };
+    static const AutoStopParams DefaultAutoStopParams;
+
     SmartServoBus();
     ~SmartServoBus() {}
 
-    void begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin);
+    void begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin, uint32_t tasks_stack_size = 2560);
 
-    void set(uint8_t id, Angle ang, float speed = 180.f, float speed_raise = 0.0015f);
+    void set(uint8_t id, Angle ang, float speed = 200.f, float speed_raise = 0.0015f);
     void limit(uint8_t id, Angle bottom, Angle top);
 
     Angle pos(uint8_t id);
     Angle posOffline(uint8_t id);
 
     void setAutoStop(uint8_t id, bool enable = true);
+    void setAutoStopParams(const AutoStopParams& params = DefaultAutoStopParams) {
+        m_auto_stop_params = params;
+    }
 
     void setId(uint8_t newId, uint8_t destId = 254);
     uint8_t getId(uint8_t destId = 254);
@@ -78,7 +92,10 @@ private:
         const lw::Packet& pkt, QueueHandle_t responseQueue = NULL, bool expect_response = false, bool to_front = false);
     void sendAndReceive(const lw::Packet& pkt, SmartServoBus::rx_response& res, bool to_front = false);
 
-    std::vector<servo_info> m_servos;
+    AutoStopParams m_auto_stop_params;
+
+    std::vector<servo_info>
+        m_servos;
     std::mutex m_mutex;
 
     QueueHandle_t m_uart_queue;

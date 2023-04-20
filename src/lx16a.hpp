@@ -130,13 +130,21 @@ struct Packet {
 
 class Servo {
 public:
-    static int posFromDeg(float angle) { return angle * 1000 / 240; }
+    static uint16_t posFromDeg(float angle) {
+        int32_t pos = angle * 1000 / 240;
+        if (pos < 0) {
+            return 0;
+        } else if (pos > 1000) {
+            return 1000;
+        }
+        return pos;
+    }
 
     // Move servo to given position (in degree) in given time (in milliseconds)
     static Packet move(Id id, lx16a::Angle pos, std::chrono::milliseconds t) {
         float position = pos.deg();
         int time = t.count();
-        if (position < 0 || position > 240)
+        if (position < -0.1 || position > 240.1)
             ESP_LOGE("LX16A", "Position out of range");
         if (time < 0)
             ESP_LOGE("LX16A", "Time is negative");

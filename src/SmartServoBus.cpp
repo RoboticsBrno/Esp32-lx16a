@@ -14,9 +14,15 @@
 
 namespace lx16a {
 
-SmartServoBus::SmartServoBus() {}
+const SmartServoBus::AutoStopParams SmartServoBus::DefaultAutoStopParams = {
+    .max_diff_centideg = 2000,
+    .max_diff_readings = 3,
+};
 
-void SmartServoBus::begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin) {
+SmartServoBus::SmartServoBus()
+    : m_auto_stop_params(DefaultAutoStopParams) {}
+
+void SmartServoBus::begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin, uint32_t tasks_stack_size) {
     if (!m_servos.empty() || servo_count == 0)
         return;
 
@@ -28,8 +34,8 @@ void SmartServoBus::begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin)
     m_uart_queue = xQueueCreate(8, sizeof(struct tx_request));
 
     TaskHandle_t task;
-    xTaskCreatePinnedToCore(&SmartServoBus::uartRoutineTrampoline, "rbservo_uart", 2048, this, 1, &task, 1);
-    xTaskCreate(&SmartServoBus::regulatorRoutineTrampoline, "rbservo_reg", 2048, this, 2, &task);
+    xTaskCreatePinnedToCore(&SmartServoBus::uartRoutineTrampoline, "rbservo_uart", tasks_stack_size, this, 1, &task, 1);
+    xTaskCreate(&SmartServoBus::regulatorRoutineTrampoline, "rbservo_reg", tasks_stack_size, this, 2, &task);
 
     Angle val;
     for (uint8_t i = 0; i < servo_count; ++i) {
@@ -150,7 +156,8 @@ void SmartServoBus::regulatorRoutine() {
     const uint32_t msPerIter = servos_cnt * msPerServo;
     const auto ticksPerIter = MS_TO_TICKS(msPerIter);
 
-    auto queue = xQueueCreate(1, sizeof(struct rx_response));
+    auto queue
+        = xQueueCreate(1, sizeof(struct rx_response));
     while (true) {
         const auto tm_iter_start = xTaskGetTickCount();
         for (size_t i = 0; i < servos_cnt; ++i) {
@@ -176,6 +183,9 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
 
     {
         std::lock_guard<std::mutex> lock(m_mutex);
+        if (s.current == s.target) {
+            return false;
+        }
 
         if (s.auto_stop) {
             lw::Packet pos_req(id, lw::Command::SERVO_POS_READ);
@@ -183,11 +193,11 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
             xQueueReceive(responseQueue, &resp, portMAX_DELAY);
             if (resp.size == 0x08) {
                 const float val = (float)((resp.data[6] << 8) | resp.data[5]);
-                const int val_int = (val / 1000.f) * 24000.f;
-                const int diff = val_int - int(s.current);
-                if (abs(diff) > 300) {
-                    if (++s.auto_stop_counter > 5) {
-                        s.target = val_int + (diff > 0 ? -200 : 200);
+                const int16_t val_int = (val / 1000.f) * 24000.f;
+                const int32_t diff = val_int - int32_t(s.current);
+                if (std::abs(diff) > m_auto_stop_params.max_diff_centideg) {
+                    if (++s.auto_stop_counter >= m_auto_stop_params.max_diff_readings) {
+                        s.target = val_int + (diff > 0 ? -500 : 500);
                         s.auto_stop_counter = 0;
                     }
                 } else if (s.auto_stop_counter != 0) {
@@ -196,17 +206,13 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
             }
         }
 
-        if (s.current == s.target) {
-            return false;
-        }
-
         float speed = s.speed_target;
         if (s.speed_coef < 1.f) {
             s.speed_coef = std::min(1.f, s.speed_coef + (s.speed_raise * timeSliceMs));
             speed *= (s.speed_coef * s.speed_coef);
         }
 
-        int32_t dist = abs(int32_t(s.target) - int32_t(s.current));
+        int32_t dist = std::abs(int32_t(s.target) - int32_t(s.current));
         dist = std::max(1, std::min(dist, int32_t(speed * timeSliceMs)));
         if (dist > 0) {
             if (s.target < s.current) {
