@@ -156,6 +156,8 @@ void SmartServoBus::regulatorRoutine() {
     const uint32_t msPerIter = servos_cnt * msPerServo;
     const auto ticksPerIter = MS_TO_TICKS(msPerIter);
 
+    printf("Timing: %d %d %d\n", (int)ticksPerServo, (int)msPerIter, (int)ticksPerIter);
+
     auto queue
         = xQueueCreate(1, sizeof(struct rx_response));
     while (true) {
@@ -195,6 +197,7 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
                 const float val = (float)((resp.data[6] << 8) | resp.data[5]);
                 const int16_t val_int = (val / 1000.f) * 24000.f;
                 const int32_t diff = val_int - int32_t(s.current);
+                printf("autostop ~%d, %d -> %d #%d\n", (int)diff, (int)val_int, (int)s.current, (int)s.auto_stop_counter);
                 if (std::abs(diff) > m_auto_stop_params.max_diff_centideg) {
                     if (++s.auto_stop_counter >= m_auto_stop_params.max_diff_readings) {
                         s.target = val_int + (diff > 0 ? -500 : 500);
@@ -227,6 +230,7 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
             s.speed_coef = 0.f;
         }
         move_pos_deg = float(s.current) / 100.f;
+        printf("Move %d %f\n", s.current, move_pos_deg);
     }
 
     const auto pkt = lw::Servo::move(id, Angle::deg(move_pos_deg), std::chrono::milliseconds(timeSliceMs - 5));
@@ -267,6 +271,7 @@ void SmartServoBus::uartRoutine() {
             vTaskDelay(min_delay - diff);
         }
 
+        printf("tx_chars %d\n", (int)req.size);
         half_duplex::uart_tx_chars(m_uart, req.data, req.size);
         tm_last = xTaskGetTickCount();
         req.size = uartReceive((uint8_t*)req.data, sizeof(req.data));
