@@ -96,6 +96,12 @@ struct Packet {
         return ~sum;
     }
 
+    Id id() const {
+        if (_data.size() < 3)
+            return 0xFF;
+        return _data[2];
+    }
+
     int size() const {
         if (_data.size() < 4)
             return -1;
