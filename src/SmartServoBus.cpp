@@ -47,9 +47,6 @@ void SmartServoBus::begin(uint8_t servo_count, BusBackend *backend, uint32_t tas
 
     Angle val;
     for (uint8_t i = 0; i < servo_count; ++i) {
-        m_servos[i].current = 0;
-        m_servos[i].target = 0;
-        continue;
         for (int x = 0; x < 3; ++x) {
             val = pos(i);
             if (!val.isNaN()) {
