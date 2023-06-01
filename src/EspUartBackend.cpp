@@ -1,8 +1,8 @@
 #include "./EspUartBackend.hpp"
 #include "./half_duplex_uart.h"
 
-#include <esp_log.h>
 #include <cstring>
+#include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -11,10 +11,11 @@
 
 namespace lx16a {
 
-
-EspUartBackend::EspUartBackend() : m_uart_queue(NULL), m_uart_task(NULL) {}
+EspUartBackend::EspUartBackend()
+    : m_uart_queue(NULL)
+    , m_uart_task(NULL) {}
 EspUartBackend::~EspUartBackend() {
-    if(m_uart_queue != NULL) {
+    if (m_uart_queue != NULL) {
         tx_request req = {};
         req.size = TX_REQUEST_SIZE_STOP_REQUEST;
         xQueueSendToFront(m_uart_queue, &req, portMAX_DELAY);
@@ -30,7 +31,6 @@ void EspUartBackend::begin(uart_port_t uart, gpio_num_t pin, uint32_t tasks_stac
     xTaskCreatePinnedToCore(&EspUartBackend::uartRoutineTrampoline, "rbservo_uart", tasks_stack_size, this, 1, &m_uart_task, 1);
 }
 
-
 void EspUartBackend::uartRoutineTrampoline(void* cookie) { ((EspUartBackend*)cookie)->uartRoutine(); }
 
 void EspUartBackend::uartRoutine() {
@@ -42,8 +42,9 @@ void EspUartBackend::uartRoutine() {
             .stop_bits = UART_STOP_BITS_1,
             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         };
+
         ESP_ERROR_CHECK(half_duplex::uart_param_config(m_uart, &uart_config));
-        ESP_ERROR_CHECK(half_duplex::uart_driver_install(m_uart, 256, 0, 0, NULL, 0));
+        ESP_ERROR_CHECK(half_duplex::uart_driver_install(m_uart, 256, 0, 0, NULL, ESP_INTR_FLAG_IRAM));
         half_duplex::uart_set_half_duplex_pin(m_uart, m_uart_pin);
     }
 
@@ -55,8 +56,8 @@ void EspUartBackend::uartRoutine() {
         if (xQueueReceive(m_uart_queue, &req, portMAX_DELAY) != pdTRUE) {
             continue;
         }
-        
-        if(req.size == TX_REQUEST_SIZE_STOP_REQUEST) {
+
+        if (req.size == TX_REQUEST_SIZE_STOP_REQUEST) {
             break;
         }
 
@@ -155,7 +156,6 @@ void EspUartBackend::send(const lw::Packet& pkt, QueueHandle_t responseQueue, bo
     } else {
         xQueueSendToBack(m_uart_queue, &req, portMAX_DELAY);
     }
-
 }
 
 };
