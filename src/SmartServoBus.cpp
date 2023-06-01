@@ -7,8 +7,8 @@
 #include <freertos/task.h>
 #include <math.h>
 
-#include "half_duplex_uart.h"
 #include "./EspUartBackend.hpp"
+#include "half_duplex_uart.h"
 
 #define TAG "SmartServoBus"
 #define MS_TO_TICKS(ms) ((portTICK_PERIOD_MS <= ms) ? (ms / portTICK_PERIOD_MS) : 1)
@@ -26,12 +26,12 @@ SmartServoBus::SmartServoBus()
 void SmartServoBus::begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin, uint32_t tasks_stack_size) {
     m_espUartBackend.reset(new EspUartBackend());
     m_espUartBackend->begin(uart, pin, tasks_stack_size);
-    
+
     begin(servo_count, m_espUartBackend.get(), tasks_stack_size);
 }
 
-void SmartServoBus::begin(uint8_t servo_count, BusBackend *backend, uint32_t tasks_stack_size) {
-    if(backend != m_espUartBackend.get()) {
+void SmartServoBus::begin(uint8_t servo_count, BusBackend* backend, uint32_t tasks_stack_size) {
+    if (backend != m_espUartBackend.get()) {
         m_espUartBackend.reset();
     }
 
@@ -220,7 +220,7 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
         }
 
         int32_t dist = std::abs(int32_t(s.target) - int32_t(s.current));
-        dist = std::max(1, std::min(dist, int32_t(speed * timeSliceMs)));
+        dist = std::max(int32_t(1), std::min(dist, int32_t(speed * timeSliceMs)));
         if (dist > 0) {
             if (s.target < s.current) {
                 s.current -= dist;
@@ -244,7 +244,6 @@ bool SmartServoBus::regulateServo(QueueHandle_t responseQueue, size_t id, uint32
     }
     return true;
 }
-
 
 void SmartServoBus::send(const lw::Packet& pkt, QueueHandle_t responseQueue, bool expect_response, bool priority) {
     m_backend->send(pkt, responseQueue, expect_response, priority);

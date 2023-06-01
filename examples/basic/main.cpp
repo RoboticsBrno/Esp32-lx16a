@@ -1,4 +1,12 @@
+#ifdef LX16A_ARDUINO
 #include <Arduino.h>
+#else
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+static void delay(int ms) {
+    vTaskDelay(pdMS_TO_TICKS(ms));
+}
+#endif
 
 #include "SmartServoBus.hpp"
 
@@ -35,3 +43,13 @@ void loop() {
     n += 15;
     delay(1000);
 }
+
+#ifndef ARDUINO
+extern "C" void app_main() {
+    setup();
+    while (true) {
+        loop();
+        vTaskDelay(0);
+    }
+}
+#endif

@@ -27,6 +27,9 @@
  *     function.
  *   * Standard uart functions may or may not be broken.
  */
+#include "esp_system.h"
+
+#if (!defined(ESP_IDF_VERSION) || ESP_IDF_VERSION < 0x040400)
 
 #include <cstring>
 #include "esp_types.h"
@@ -47,7 +50,7 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "driver/uart_select.h"
-#include "half_duplex_uart.h"
+#include "half_duplex_uart_33.h"
 
 namespace lx16a {
 namespace half_duplex {
@@ -1664,3 +1667,5 @@ void uart_set_half_duplex_pin(uart_port_t uart_num, gpio_num_t pin) {
 
 }; // namespace half_duplex
 }; // namespace rb
+
+#endif // #if (!defined(ESP_IDF_VERSION) || ESP_IDF_VERSION < 0x050000)

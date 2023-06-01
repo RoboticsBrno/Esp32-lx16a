@@ -9,15 +9,21 @@ jobs:
       matrix:
         example:
           - examples/basic
+        conf:
+          - esp32-idf3-arduino.ini
+          - esp32-idf4-arduino.ini
+          - esp32-idf5-idf.ini
+          - esp32s3-idf4-arduino.ini
+          - esp32s3-idf5-idf.ini
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install platformio
       - name: Build examples
-        run: platformio ci --lib="." --project-conf="./platformio.ini"
+        run: platformio ci --lib="." --project-conf="./test-inis/${{ matrix.conf }}"
         env:
           PLATFORMIO_CI_SRC: ${{ matrix.example }}

@@ -4,12 +4,11 @@
 #include <vector>
 
 #include <driver/gpio.h>
-#include <driver/pcnt.h>
 
-#include "./angle.hpp"
-#include "./lx16a.hpp"
 #include "./BusBackend.hpp"
 #include "./EspUartBackend.hpp"
+#include "./angle.hpp"
+#include "./lx16a.hpp"
 #include <memory>
 
 namespace lx16a {
@@ -31,7 +30,7 @@ public:
     ~SmartServoBus() {}
 
     void begin(uint8_t servo_count, uart_port_t uart, gpio_num_t pin, uint32_t tasks_stack_size = 2560);
-    void begin(uint8_t servo_count, BusBackend *backend, uint32_t tasks_stack_size = 2560);
+    void begin(uint8_t servo_count, BusBackend* backend, uint32_t tasks_stack_size = 2560);
 
     void set(uint8_t id, Angle ang, float speed = 200.f, float speed_raise = 0.0015f);
     void limit(uint8_t id, Angle bottom, Angle top);
@@ -86,7 +85,7 @@ private:
         m_servos;
     std::mutex m_mutex;
 
-    BusBackend *m_backend;
+    BusBackend* m_backend;
     std::unique_ptr<EspUartBackend> m_espUartBackend;
 };
 
