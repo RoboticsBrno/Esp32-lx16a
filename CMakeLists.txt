@@ -1,0 +1,15 @@
+idf_component_register(
+    SRCS
+        "src/EspUartBackend.cpp"
+        "src/SmartServoBus.cpp"
+        "src/angle.cpp"
+        "src/half_duplex_uart_541.cpp"
+    INCLUDE_DIRS
+        "src"
+    REQUIRES
+        driver
+        esp_common
+        log
+    PRIV_REQUIRES
+        soc
+)

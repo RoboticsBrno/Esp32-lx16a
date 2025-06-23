@@ -41,6 +41,7 @@ void EspUartBackend::uartRoutine() {
             .parity = UART_PARITY_DISABLE,
             .stop_bits = UART_STOP_BITS_1,
             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+            .source_clk = UART_SCLK_DEFAULT,
         };
 
         ESP_ERROR_CHECK(half_duplex::uart_param_config(m_uart, &uart_config));
@@ -141,7 +142,7 @@ size_t EspUartBackend::uartReceive(uint8_t* buff, size_t bufcap) {
 }
 
 void EspUartBackend::send(const lw::Packet& pkt, QueueHandle_t responseQueue, bool expect_response, bool priority) {
-    struct tx_request req = { 0 };
+    struct tx_request req = {0};
     req.size = (uint8_t)pkt._data.size();
     req.expect_response = expect_response;
     req.responseQueue = responseQueue;
